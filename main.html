@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!-- react  -->
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+    <!-- react DOM -->
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+    <!-- babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.24.0/babel.js"></script>
+    <!-- bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <!-- custom style -->
+    <style>
+        *{
+            background: rgb(28, 29, 51);
+        }
+        .in-val{
+            border : 2px solid rgb(156, 221, 58);
+            border-radius: 10px;
+        }
+        .brd{
+            border : 5px solid rgb(156, 221, 58);
+            border-radius: 10px;
+        }
+        .in-sel{
+            border : 2px solid rgb(156, 221, 58);
+            border-radius: 5px;
+        }
+        .txt{
+            color :rgb(156, 221, 58);
+        }
+    </style>  
+</head>
+<body>
+    <div id="app"></div>
+
+    
+    <script type="text/babel">
+        class Exchange extends React.Component{
+            constructor( props ){
+                super( props )
+                this.currencies = ["CAD","INR","USD","EUR"]
+                this.state = {
+                    base : "INR",
+                    other : "USD",
+                    value : 0,
+                    converted : 0
+                }
+                this.cached = {}
+            }
+
+            render(){
+                return ( 
+                    <div className="container txt brd">
+                        <div className="container my-3">
+                            <label className="my-2">choice the currencie to convert</label>
+                            <select name="base" value={ this.state.base } 
+                            onChange={ this.updateCurr } className="mx-4 my-2 text-white in-sel">
+                                { this.currencies.map( currencie  => 
+                                    <option key={ currencie } value={ currencie }>
+                                        { currencie }
+                                    </option>
+                                )}
+                            </select>
+                            <input placeholder="base currencie" onChange={ this.changeBaseVal }
+                            value={ this.state.value } className="text-center text-white in-val"/>
+                        </div>
+                        <div className="container my-3">
+                            <label className="my-2">choice a currencie to convert to</label>
+                            <select name="other" value={ this.state.other }
+                            onChange={ this.updateCurr } className="mx-4 my-2 in-sel text-white">
+                                { this.currencies.map( currencie  => 
+                                    <option key={ currencie } value={ currencie }>
+                                        { currencie }
+                                    </option>
+                                )}
+                            </select>
+                            <input placeholder="converted value" disable={true} 
+                            value={ this.state.converted === null ? "calculating..." : this.state.converted }
+                            className="in-val text-center text-white"/>
+                        </div>
+                    </div>
+                )
+            }
+        
+        reCal = () => {
+            let val = parseFloat( this.state.value )
+            if ( isNaN(val) ){
+                // alert("enter an valid input,only numbers")
+                return 
+            }
+            if ( this.cached[this.state.base] !== undefined && 
+                Date.now() - this.cached[this.state.base].timestamp < 1000 * 60 )
+            {
+                this.setState({
+                    converted : this.cached[this.state.base].rates[this.state.other] * this.state.value
+                })
+                return 
+            }
+            fetch(`https://api.exchangeratesapi.io/latest?base=${this.state.base}`)
+                .then( res => res.json())
+                .then( data => {
+                    this.cached[this.state.base] = {
+                        rates : data.rates,
+                        timestamp : Date.now()
+                    }
+                    this.setState({
+                        converted : data.rates[this.state.other] * this.state.value
+                    })
+                })
+            
+        }
+
+        changeBaseVal = ( event ) => {
+            this.setState({
+                value : event.target.value,
+                converted : null
+            }, this.reCal )
+        }
+
+        updateCurr = ( event ) => {
+            this.setState({
+                [ event.target.name ] : event.target.value
+            }, this.reCal )
+        }
+
+        }
+        class App extends React.Component{
+            render(){
+                return (
+                    <div className="container text-center mt-5">
+                        <h1 className="txt my-5">$ - currency-convert -   $</h1>
+                        <Exchange />  
+                    </div>                  
+                )
+            }
+        
+        }
+
+        ReactDOM.render(<App />,document.querySelector("#app"))
+    </script>
+</body>
+</html>
